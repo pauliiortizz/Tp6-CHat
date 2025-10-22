@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<testsuite name="Chrome Headless 140.0.0.0 (Windows 10)" package="" timestamp="2025-10-08T15:53:47" id="0" hostname="pau" tests="4" errors="0" failures="0" time="0.087">
+  <properties>
+    <property name="browser.fullName" value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.0.0 Safari/537.36"/>
+  </properties>
+  <testcase name="AddemployeeComponent should create" time="0.054" classname="AddemployeeComponent"/>
+  <testcase name="EmployeeComponent should create" time="0.02" classname="EmployeeComponent"/>
+  <testcase name="AppComponent should render title" time="0.007" classname="AppComponent"/>
+  <testcase name="EmployeeService should retrieve all employees" time="0.006" classname="EmployeeService"/>
+  <system-out>
+    <![CDATA[Chrome Headless 140.0.0.0 (Windows 10) LOG: 'Employee createdDate:', '08/10/2025 12:53:47'
+,Chrome Headless 140.0.0.0 (Windows 10) LOG: 'Dummy employee createdDate:', '08/10/2025 12:53:47'
+,Chrome Headless 140.0.0.0 (Windows 10) LOG: 'Employee createdDate:', '08/10/2025 12:53:47'
+,Chrome Headless 140.0.0.0 (Windows 10) LOG: 'Dummy employee createdDate:', '08/10/2025 12:53:47'
+
+]]>
+  </system-out>
+  <system-err/>
+</testsuite>

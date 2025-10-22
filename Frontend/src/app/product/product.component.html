@@ -1,0 +1,68 @@
+<style>
+    .rowGrayBg {
+        background-color: #f7f9fb;
+    }
+    .header-bar {
+        background: linear-gradient(90deg,#0d6efd,#6610f2);
+        color: white;
+        padding: 12px;
+        border-radius: 6px;
+    }
+    .btn-accent {
+        background-color: #20c997;
+        border-color: #20c997;
+        color: white;
+    }
+</style>
+
+    <div class="w-100">
+    <div class="header-bar mb-2">
+        <div class="d-flex align-items-center">
+            <h4 class="mb-0">Productos</h4>
+            <div class="ml-auto d-flex align-items-center header-controls">
+                <!-- Restablecer button removed per request -->
+                <button type="button" class="btn-corp ml-3" (click)="addEmployee()">Agregar producto</button>
+            </div>
+        </div>
+    </div>
+
+        <!-- Search bar full width -->
+        <div class="search-bar mb-3 px-2" style="width:100%">
+            <input #searchInputMain type="search" placeholder="Buscar productos..." class="form-control" style="width:100%; height:44px" (input)="searchItem(searchInputMain.value)">
+        </div>
+
+    <table class="table table-hover shadow-sm">
+        <tr class="table-header">
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Stock</th>
+            <th>Fecha creación</th>
+            <th></th>
+            <th><img src="assets/images/loading.gif" [style.display]="imgLoadingDisplay"></th>
+        </tr>
+        <tr *ngFor="let product of employees | async; let odd=odd;" [class.rowGrayBg]="odd" [class.show]="visibleIds.has(product.id)">
+            <td class="align-middle">
+                {{product.id}}
+            </td>
+            <td class="align-middle">
+                {{product.name}}
+            </td>
+            <td class="align-middle">
+                {{product.stock}}
+            </td>
+            <td class="align-middle">
+                {{product.createdDate}}
+            </td>
+                        <td>
+                                <button class="btn btn-sm btn-action btn-edit" (click)="editEmployee(product.id)" aria-label="Editar producto">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                        </td>
+                        <td>
+                                <button class="btn btn-sm btn-action btn-delete" (click)="deleteEmployee(product.id)" aria-label="Eliminar producto">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                        </td>
+        </tr>
+    </table>
+</div>

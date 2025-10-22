@@ -1,0 +1,97 @@
+
+:host {
+	display: block;
+	padding: 8px 12px;
+}
+
+.header-bar {
+	border-radius: 10px;
+	box-shadow: 0 6px 18px rgba(13,110,253,0.12), 0 3px 6px rgba(102,16,242,0.08);
+}
+.header-bar {
+	border-radius: 12px;
+	box-shadow: 0 8px 26px rgba(0,0,0,0.06);
+	padding: 14px;
+	background: linear-gradient(90deg,var(--corp-primary), var(--corp-secondary));
+	color: var(--text-on-primary, #fff);
+}
+
+.btn-accent {
+	background-color: #20c997;
+	border-color: #20c997;
+	  display: block;
+	  padding: 8px 12px;
+}
+	/* Header */
+	.header-bar {
+	  border-radius: 12px;
+	  box-shadow: 0 8px 26px rgba(0,0,0,0.06);
+	  padding: 14px;
+		background: linear-gradient(90deg, var(--corp-primary), var(--corp-secondary)) !important;
+		color: var(--text-on-primary, #fff) !important;
+	}
+
+	/* Accent button */
+	.btn-accent {
+	  background: linear-gradient(90deg, var(--corp-secondary), var(--corp-accent));
+	  color: var(--text-on-primary, #fff);
+	  border: none;
+	  padding: 10px 16px;
+	  border-radius: 10px;
+	}
+
+	/* Action buttons for edit/delete */
+	.btn-action { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; padding: 0; }
+	.btn-action i { font-size: 14px }
+	.btn-edit { background: linear-gradient(90deg, #28a745, #20c997); color: #fff; border: none; }
+	.btn-edit:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(32,201,151,0.18); }
+	.btn-delete { background: linear-gradient(90deg, #ff6b6b, #ff4757); color: #fff; border: none; }
+	.btn-delete:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255,71,87,0.18); }
+
+	.table { border-radius: 8px; overflow: hidden; }
+	.table thead tr th { padding: 12px 16px }
+	.table tbody td { padding: 12px 16px }
+
+	.header-bar h4 { font-weight: 700 }
+
+	/* Table header uses corporate palette */
+	.table thead tr {
+	  background: linear-gradient(90deg, var(--corp-primary), var(--corp-secondary));
+	  color: var(--text-on-primary, #fff);
+	}
+
+	.table-hover tbody tr:hover {
+	  background: rgba(0,0,0,0.02);
+	}
+
+	.rowGrayBg {
+	  background-color: #fbfcfd;
+	}
+
+	.search-input {
+	  width: 320px;
+	  max-width: 60%;
+	}
+
+	.search-bar { padding: 10px 12px; background: transparent; }
+	.search-bar .form-control { width: 100%; max-width: 900px }
+
+	.table thead tr { background: linear-gradient(90deg, var(--corp-primary), var(--corp-secondary)) !important; color: var(--text-on-primary) !important }
+
+	.card-wrapper {
+	  background: #fff;
+	  border-radius: 8px;
+	  padding: 12px;
+	  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+	}
+
+	.small-icon { font-size: 14px }
+
+	/* corporate buttons */
+	.btn-corp { background: linear-gradient(90deg,var(--corp-primary),var(--corp-secondary)); color: white; border: none; border-radius: 8px; padding: 8px 14px }
+
+	/* table row animation */
+	.table-row { opacity: 0; transform: translateY(6px); }
+	.table-row.show { opacity: 1; transform: translateY(0); transition: all 360ms cubic-bezier(.2,.8,.2,1); }
+
+

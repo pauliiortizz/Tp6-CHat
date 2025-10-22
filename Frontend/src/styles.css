@@ -1,0 +1,70 @@
+/* Global styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+html,body { height: 100%; }
+body{
+	font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	background: #f4f7fb;
+	margin: 0;
+	color: #172b4d;
+}
+h1, h2, h3, h4 { font-weight: 600 }
+
+.app-title { margin: 12px 0 20px 8px }
+
+.btn-accent { border-radius: 6px; padding: 8px 14px }
+
+/* small helper */
+.ml-2{ margin-left: 8px }
+
+/* Corporate palette */
+:root{
+	/* New corporate palette (away from blue/white) */
+	--corp-primary: #00695c; /* deep teal */
+	--corp-secondary: #ff7043; /* warm coral/orange */
+	--corp-accent: #ffd54f; /* soft mustard */
+	--corp-success: #06d6a0; /* mint */
+	--text-on-primary: #ffffff;
+}
+
+/* Fade/slide animation for list items */
+.fade-in-up{ animation: fadeUp 420ms ease both }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+
+/* Buttons global styles */
+.btn-corp { display:inline-block; cursor:pointer; border-radius:12px; padding:10px 18px; font-weight:700; box-shadow: 0 10px 24px rgba(0,0,0,0.08); transition: transform .14s cubic-bezier(.2,.8,.2,1), box-shadow .14s, filter .12s }
+.btn-corp:hover { transform: translateY(-4px); box-shadow: 0 18px 36px rgba(0,0,0,0.12) }
+.btn-corp:active { transform: translateY(-1px); box-shadow: 0 6px 12px rgba(0,0,0,0.06); filter:brightness(.94) }
+.btn-ghost { background: rgba(255,255,255,0.06); border:1px solid rgba(0,0,0,0.06); color: #222 }
+
+/* Force override bootstrap primary colors to avoid blue dominance */
+.btn-primary, .btn-primary:focus, .btn-primary:hover { background: linear-gradient(90deg,var(--corp-primary),var(--corp-secondary)) !important; border-color: transparent !important; color: var(--text-on-primary) !important }
+.table thead tr, .table thead th { background: linear-gradient(90deg,var(--corp-primary),var(--corp-secondary)) !important; color: var(--text-on-primary) !important }
+
+/* header spacing */
+.header-controls { gap: 12px }
+
+.header-controls > * { margin-right: 12px }
+.header-controls .form-control { width: 320px }
+
+/* Ensure ngx-toastr displays as overlay popups (fallback/override in case toastr.css wasn't loaded)
+	 These rules make the toast container fixed and place it above page content. They are minimal
+	 and only intended to guarantee correct positioning when the library CSS is missing or
+	 overridden by project styles. */
+.toast-container {
+	position: fixed !important;
+	z-index: 1060 !important;
+	pointer-events: none !important; /* container shouldn't block clicks */
+}
+.toast-top-right {
+	top: 12px !important;
+	right: 12px !important;
+	left: auto !important;
+	bottom: auto !important;
+	position: fixed !important;
+}
+.toast {
+	pointer-events: auto !important; /* allow interacting with the toast (close button) */
+}
+
+
+

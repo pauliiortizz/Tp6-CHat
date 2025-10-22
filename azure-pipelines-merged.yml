@@ -1,0 +1,292 @@
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pr:
+  branches:
+    include:
+      - '*'
+
+variables:
+- group: StaticWebAppTokens
+# - group: BackendSecrets  # Si más adelante agregás tus variables secretas
+
+pool:
+  name: Pauli
+
+stages:
+# =======================================
+# 🧱 BUILD & TEST
+# =======================================
+- stage: BuildAndTest
+  displayName: "Build & Test Backend + Frontend"
+  jobs:
+    - job: BuildAndTest
+      steps:
+        - checkout: self
+
+        # ---- Backend (.NET 8) ----
+        - task: UseDotNet@2
+          displayName: "Setup .NET 8"
+          inputs:
+            packageType: sdk
+            version: "8.0.x"
+
+        - script: dotnet restore ProductApi.sln
+          displayName: "Restore .NET"
+          workingDirectory: Backend
+
+        - script: dotnet build ProductApi.sln --configuration Release --no-restore
+          displayName: "Build .NET"
+          workingDirectory: Backend
+
+        - script: >
+            dotnet test --configuration Release
+            --logger "trx;LogFileName=dotnet-tests.trx"
+            --results-directory "$(Build.SourcesDirectory)/test-results"
+          displayName: "Test .NET"
+          workingDirectory: Backend.Tests
+
+        - task: PublishTestResults@2
+          displayName: "Publish .NET Test Results"
+          inputs:
+            testResultsFormat: "VSTest"
+            testResultsFiles: "test-results/*.trx"
+            searchFolder: "$(Build.SourcesDirectory)"
+            mergeTestResults: true
+            failTaskOnFailedTests: true
+
+        # ---- Publicar artefacto del backend ----
+        - script: >
+            dotnet publish Backend/Backend/ProductosApi.csproj
+            -c Release -o "$(Build.ArtifactStagingDirectory)/backend-publish"
+          displayName: "Publish Backend (dotnet publish)"
+
+        - task: PublishBuildArtifacts@1
+          displayName: "Publish Backend Artifact"
+          inputs:
+            PathtoPublish: "$(Build.ArtifactStagingDirectory)/backend-publish"
+            ArtifactName: "drop-back"
+
+        # ---- Frontend (Angular) ----
+        - task: NodeTool@0
+          displayName: "Setup Node.js 20"
+          inputs:
+            versionSpec: "20.x"
+
+        - script: npm ci
+          displayName: "Install Angular Dependencies"
+          workingDirectory: Frontend
+
+        - task: Cache@2
+          displayName: "Cache Angular build cache"
+          inputs:
+            key: 'angular-cache | $(Agent.OS) | "$(Build.SourcesDirectory)/Frontend/package-lock.json"'
+            restoreKeys: 'angular-cache | $(Agent.OS) |'
+            path: '$(Build.SourcesDirectory)/Frontend/.angular/cache'
+
+        - script: |
+            echo "🚀 Running Angular tests with stability tweaks..."
+            npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false --no-progress --code-coverage
+          displayName: "Run Angular Tests (Headless CI)"
+          workingDirectory: Frontend
+          env:
+            CHROME_BIN: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+            CHROME_NO_SANDBOX: "true"
+
+
+
+
+        - task: PublishTestResults@2
+          displayName: "Publish Angular Test Results"
+          inputs:
+            testResultsFormat: "JUnit"
+            testResultsFiles: "Frontend/test-results/*.xml"
+            mergeTestResults: true
+            failTaskOnFailedTests: true
+
+# =======================================
+# 🌐 DEPLOY QA
+# =======================================
+- stage: Deploy_QA
+  displayName: "Deploy to QA"
+  dependsOn: BuildAndTest
+  variables:
+    API_URL_QA: $(API_URL_QA)
+    MONGO_CONNSTR_QA: $(MONGO_CONNSTR_QA)
+    WEBAPP_QA: tp05-backend-qa
+    RG_QA: $(RG_QA)
+    FRONT_ORIGIN_QA: $(FRONT_ORIGIN_QA)
+  jobs:
+    - deployment: DeployQA
+      displayName: "Desplegar QA"
+      environment: "QA"
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: self
+
+              - download: current
+                artifact: drop-back
+
+              - task: ArchiveFiles@2
+                displayName: "Empaquetar Backend (QA)"
+                inputs:
+                  rootFolderOrFile: "$(Pipeline.Workspace)/drop-back"
+                  includeRootFolder: false
+                  archiveFile: "$(Pipeline.Workspace)/drop-back.zip"
+                  replaceExistingArchive: true
+
+              # Configurar App Settings Mongo QA
+              - task: AzureCLI@2
+                displayName: "Set App Settings (Mongo) QA"
+                inputs:
+                  azureSubscription: "azure-connection-tp06"
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az webapp config appsettings set `
+                      --name $(WEBAPP_QA) `
+                      --resource-group $(RG_QA) `
+                      --settings ConnectionStrings__MongoDb="$(MONGO_CONNSTR_QA)"
+
+              - task: AzureCLI@2
+                displayName: "Configure CORS (App Service) QA"
+                inputs:
+                  azureSubscription: "azure-connection-tp06"
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    if ("$(FRONT_ORIGIN_QA)" -ne "") {
+                      az webapp cors add `
+                        --name $(WEBAPP_QA) `
+                        --resource-group $(RG_QA) `
+                        --allowed-origins $(FRONT_ORIGIN_QA)
+                    } else {
+                      Write-Host "FRONT_ORIGIN_QA vacío: omitiendo configuración de CORS."
+                    }
+
+              - task: AzureWebApp@1
+                displayName: "Deploy Backend QA"
+                inputs:
+                  azureSubscription: "azure-connection-tp06"
+                  appName: "$(WEBAPP_QA)"
+                  package: "$(Pipeline.Workspace)/drop-back.zip"
+
+              # ---- Frontend QA ----
+              - task: NodeTool@0
+                displayName: "Setup Node.js 20 (QA)"
+                inputs:
+                  versionSpec: "20.x"
+
+              - script: npm ci
+                displayName: "Install Frontend (QA)"
+                workingDirectory: Frontend
+
+              - powershell: |
+                  $file = "$(Build.SourcesDirectory)/Frontend/src/environments/environment.prod.ts"
+                  (Get-Content -Raw $file) -replace "https://tu-api.azurewebsites.net/api/Product", "$(API_URL_QA)" | Set-Content $file
+                displayName: "Set API URL (environment.prod.ts) QA"
+
+              - script: npm run build -- --configuration production
+                displayName: "Build Angular (QA)"
+                workingDirectory: Frontend
+
+              - script: |
+                  cd Frontend
+                  npx -y @azure/static-web-apps-cli@1.1.7 deploy ./dist/employee-crud-angular --deployment-token $(SWA_TOKEN_QA)
+                displayName: "Deploy Frontend QA"
+
+# =======================================
+# 🚀 DEPLOY PROD
+# =======================================
+- stage: Deploy_PROD
+  displayName: "Deploy to Production"
+  dependsOn: Deploy_QA
+  variables:
+    API_URL_PROD: $(API_URL_PROD)
+    MONGO_CONNSTR_PROD: $(MONGO_CONNSTR_PROD)
+    WEBAPP_PROD: tp05-backend-prod
+    RG_PROD: $(RG_PROD)
+    FRONT_ORIGIN_PROD: $(FRONT_ORIGIN_PROD)
+  jobs:
+    - deployment: DeployPROD
+      displayName: "Desplegar PROD"
+      environment: "PROD"
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: self
+
+              - download: current
+                artifact: drop-back
+
+              - task: ArchiveFiles@2
+                displayName: "Empaquetar Backend (PROD)"
+                inputs:
+                  rootFolderOrFile: "$(Pipeline.Workspace)/drop-back"
+                  includeRootFolder: false
+                  archiveFile: "$(Pipeline.Workspace)/drop-back.zip"
+                  replaceExistingArchive: true
+
+              - task: AzureCLI@2
+                displayName: "Set App Settings (Mongo) PROD"
+                inputs:
+                  azureSubscription: "azure-connection-tp06"
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az webapp config appsettings set `
+                      --name $(WEBAPP_PROD) `
+                      --resource-group $(RG_PROD) `
+                      --settings ConnectionStrings__MongoDb="$(MONGO_CONNSTR_PROD)"
+
+              - task: AzureCLI@2
+                displayName: "Configure CORS (App Service) PROD"
+                inputs:
+                  azureSubscription: "azure-connection-tp06"
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    if ("$(FRONT_ORIGIN_PROD)" -ne "") {
+                      az webapp cors add `
+                        --name $(WEBAPP_PROD) `
+                        --resource-group $(RG_PROD) `
+                        --allowed-origins $(FRONT_ORIGIN_PROD)
+                    } else {
+                      Write-Host "FRONT_ORIGIN_PROD vacío: omitiendo configuración de CORS."
+                    }
+
+              - task: AzureWebApp@1
+                displayName: "Deploy Backend PROD"
+                inputs:
+                  azureSubscription: "azure-connection-tp06"
+                  appName: "$(WEBAPP_PROD)"
+                  package: "$(Pipeline.Workspace)/drop-back.zip"
+
+              - task: NodeTool@0
+                displayName: "Setup Node.js 20 (PROD)"
+                inputs:
+                  versionSpec: "20.x"
+
+              - script: npm ci
+                displayName: "Install Frontend (PROD)"
+                workingDirectory: Frontend
+
+              - powershell: |
+                  $file = "$(Build.SourcesDirectory)/Frontend/src/environments/environment.prod.ts"
+                  (Get-Content -Raw $file) -replace "https://tu-api.azurewebsites.net/api/Product", "$(API_URL_PROD)" | Set-Content $file
+                displayName: "Set API URL (environment.prod.ts) PROD"
+
+              - script: npm run build -- --configuration production
+                displayName: "Build Angular (PROD)"
+                workingDirectory: Frontend
+
+              - script: |
+                  cd Frontend
+                  npx -y @azure/static-web-apps-cli@1.1.7 deploy ./dist/employee-crud-angular --deployment-token $(SWA_TOKEN_PROD) --env prod
+                displayName: "Deploy Frontend PROD"
