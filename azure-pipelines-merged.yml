@@ -116,6 +116,7 @@ stages:
   variables:
     API_URL_QA: $(API_URL_QA)
     MONGO_CONNSTR_QA: $(MONGO_CONNSTR_QA)
+    MONGO_DBNAME_QA: "MyDB"
     WEBAPP_QA: tp05-backend-qa
     RG_QA: $(RG_QA)
     FRONT_ORIGIN_QA: $(FRONT_ORIGIN_QA)
@@ -151,7 +152,9 @@ stages:
                     az webapp config appsettings set `
                       --name $(WEBAPP_QA) `
                       --resource-group $(RG_QA) `
-                      --settings ConnectionStrings__MongoDb="$(MONGO_CONNSTR_QA)"
+                      --settings ConnectionStrings__MongoDb="$(MONGO_CONNSTR_QA)" `
+                                 MongoDbSettings__DatabaseName="$(MONGO_DBNAME_QA)" `
+                                 ASPNETCORE_ENVIRONMENT="QA"
 
               - task: AzureCLI@2
                 displayName: "Configure CORS (App Service) QA"
@@ -187,11 +190,11 @@ stages:
                 workingDirectory: Frontend
 
               - powershell: |
-                  $file = "$(Build.SourcesDirectory)/Frontend/src/environments/environment.prod.ts"
-                  (Get-Content -Raw $file) -replace "https://tu-api.azurewebsites.net/api/Product", "$(API_URL_QA)" | Set-Content $file
-                displayName: "Set API URL (environment.prod.ts) QA"
+                  $file = "$(Build.SourcesDirectory)/Frontend/src/environments/environment.qa.ts"
+                  (Get-Content -Raw $file) -replace "API_URL_QA_PLACEHOLDER", "$(API_URL_QA)" | Set-Content $file
+                displayName: "Set API URL (environment.qa.ts) QA"
 
-              - script: npm run build -- --configuration production
+              - script: npm run build -- --configuration qa
                 displayName: "Build Angular (QA)"
                 workingDirectory: Frontend
 
@@ -201,14 +204,36 @@ stages:
                 displayName: "Deploy Frontend QA"
 
 # =======================================
+# ✅ APPROVAL GATE
+# =======================================
+- stage: Approve_PROD
+  displayName: "Manual approval before Production"
+  dependsOn: Deploy_QA
+  jobs:
+    - job: WaitForProdApproval
+      displayName: "Esperar aprobación QA/Negocio"
+      pool: server
+      steps:
+        - task: ManualValidation@0
+          displayName: "Aprobación manual para despliegue a PROD"
+          timeoutInMinutes: 4320  # 3 días
+          inputs:
+            instructions: |
+              1. Validar la App Service y la Static Web App de QA.
+              2. Confirmar con el QA Lead que la regresión pasó.
+              3. Obtener el OK del Product Owner antes de continuar.
+            onTimeout: 'reject'
+
+# =======================================
 # 🚀 DEPLOY PROD
 # =======================================
 - stage: Deploy_PROD
   displayName: "Deploy to Production"
-  dependsOn: Deploy_QA
+  dependsOn: Approve_PROD
   variables:
     API_URL_PROD: $(API_URL_PROD)
     MONGO_CONNSTR_PROD: $(MONGO_CONNSTR_PROD)
+    MONGO_DBNAME_PROD: "MyDB-PROD"
     WEBAPP_PROD: tp05-backend-prod
     RG_PROD: $(RG_PROD)
     FRONT_ORIGIN_PROD: $(FRONT_ORIGIN_PROD)
@@ -243,7 +268,9 @@ stages:
                     az webapp config appsettings set `
                       --name $(WEBAPP_PROD) `
                       --resource-group $(RG_PROD) `
-                      --settings ConnectionStrings__MongoDb="$(MONGO_CONNSTR_PROD)"
+                      --settings ConnectionStrings__MongoDb="$(MONGO_CONNSTR_PROD)" `
+                                 MongoDbSettings__DatabaseName="$(MONGO_DBNAME_PROD)" `
+                                 ASPNETCORE_ENVIRONMENT="Production"
 
               - task: AzureCLI@2
                 displayName: "Configure CORS (App Service) PROD"
@@ -279,7 +306,7 @@ stages:
 
               - powershell: |
                   $file = "$(Build.SourcesDirectory)/Frontend/src/environments/environment.prod.ts"
-                  (Get-Content -Raw $file) -replace "https://tu-api.azurewebsites.net/api/Product", "$(API_URL_PROD)" | Set-Content $file
+                  (Get-Content -Raw $file) -replace "API_URL_PROD_PLACEHOLDER", "$(API_URL_PROD)" | Set-Content $file
                 displayName: "Set API URL (environment.prod.ts) PROD"
 
               - script: npm run build -- --configuration production

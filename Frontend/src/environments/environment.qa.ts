@@ -1,5 +1,8 @@
 export const environment = {
   qa: true,
-  // Actualizá esta URL al dominio público de tu API en Azure/Clever Cloud
-  apiUrl: 'https://productosweb-fpcnfsbsg8gscbat.brazilsouth-01.azurewebsites.net/api/Product'  // URL de la API para prod (productos)
+  /**
+   * Placeholder que se sobreescribe en el pipeline de QA.
+   * De forma local podés apuntarlo manualmente al endpoint público si necesitás pruebas contra la API en la nube.
+   */
+  apiUrl: 'API_URL_QA_PLACEHOLDER'
 };
